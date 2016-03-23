@@ -1,0 +1,84 @@
+public static class MaxMapper extends Mapper <Text, Text, Text, UnigramFreqWritable>{
+		//input: <author, unigram;   termFrequencyFij>
+		//output: <author;   UnigramFreqWritable:[unigram termFrequencyFij]>
+		public void map(Text key, Text value, Context context) throws IOException, InterruptedException{
+			String[] authorUnigram = key.toString().split(",");	
+			context.write(new Text(authorUnigram[0]), new UnigramFreqWritable(new Text(authorUnigram[1]), value));
+		}
+	}
+	
+	public static class MaxReducer extends Reducer<Text,UnigramFreqWritable,Text,Text> {	   
+
+	    public void reduce(Text key, Iterable<UnigramFreqWritable> values,Context context) throws IOException, InterruptedException {
+	    	context.write(new Text("lisa") , new Text(key));
+	    	int max = Integer.MIN_VALUE;
+	    	int freq = -1;
+	    	for (UnigramFreqWritable val : values) {
+	    	  freq = val.getFreq();
+	    	  if(freq > max){
+	    		  max = freq;
+	    	  }
+	    	}
+	     
+	    	for (UnigramFreqWritable val : values) {
+	    	  context.write(new Text("you") , new Text(key));
+	    	  context.write(val.getUnigram(), new Text(key.toString() + " " + (double)val.getFreq() / max));
+	    	}
+	    }
+	  }
+	  
+	  
+	  New Writable===================
+	  
+package pa2;
+
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class NiReducer extends Reducer<Text,AuthorTFWritable,Text,Text>{
+	//input: <unigram;   author,TF>
+	//output: <unigram;   author,TF IDF>
+	public void reduce(Text key, Iterable<AuthorTFWritable> values,
+                       Context context
+                       ) throws IOException, InterruptedException {
+		List<AuthorTFWritable> cache = new LinkedList<AuthorTFWritable>();
+		
+		Configuration conf = context.getConfiguration();
+		long numAuthor = Long.parseLong(conf.get("num_author"));
+		long niCount = 0;
+		for (AuthorTFWritable val : values) {
+			niCount++;
+			cache.add(val);
+		}
+		double niCountDbl = niCount;
+		double idf = 0;
+		
+		for(AuthorTFWritable wtb: cache){
+			idf = Math.log(numAuthor / niCountDbl)/Math.log(2);
+			context.write(key, new Text(wtb.getAuthor() + "," + wtb.getTF()+ " " + numAuthor + " " + niCountDbl));
+		}
+		
+      
+    }
+}
+	  
+	  public class NiMapper extends Mapper <Text, Text, Text, AuthorTFWritable>{
+	//input: <unigram;   author,TF>
+	//output: <unigram;   AuthorTFWritable(author,TF)>
+
+	AuthorTFWritable valueWriter = new AuthorTFWritable();
+	
+	public void map(Text key, Text value, Context context) throws IOException, InterruptedException{
+		String[] cont = value.toString().split(",");
+		valueWriter.setAuthor(cont[0]);
+		valueWriter.setTF(Double.parseDouble(cont[1]));
+		context.write(key, valueWriter);
+	}
+}
+
+	  
