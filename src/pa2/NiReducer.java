@@ -10,7 +10,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 public class NiReducer extends Reducer<Text,Text,Text,Text>{
 	//input: <unigram;   author,TF>
-	//output: <unigram;   author,TFIDF>
+	//output: <unigram;   author,TFIDF IDF>
 	public void reduce(Text key, Iterable<Text> values,
                        Context context
                        ) throws IOException, InterruptedException {
@@ -33,7 +33,7 @@ public class NiReducer extends Reducer<Text,Text,Text,Text>{
 			String[] cont = s.split(",");
 			tf = Double.parseDouble(cont[1]);
 			tfidf = tf * idf;
-			context.write(key, new Text(cont[0] + "," + tfidf));
+			context.write(key, new Text(cont[0] + "," + tfidf + " " + idf));
 		}
 		
       

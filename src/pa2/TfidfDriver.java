@@ -1,6 +1,7 @@
 package pa2;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -16,17 +17,17 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 
 public class TfidfDriver {
-	/*
-	public final static Path OUTPUT_PATH_UNI = new Path("/output/unigram");
-	public final static Path OUTPUT_PATH_MAX = new Path("/output/max");
-	public final static Path OUTPUT_PATH_NI = new Path("/output/ni");
-	public final static Path OUTPUT_PATH_FINAL = new Path("/output/1");
-	/* */
+	
+	public final static Path OUTPUT_PATH_UNI = new Path("/output/unigramLocal");
+	public final static Path OUTPUT_PATH_MAX = new Path("/output/maxLocal");
+	public final static Path OUTPUT_PATH_NI = new Path("/output/niLocal");
+	public final static Path OUTPUT_PATH_N = new Path("/output/NLocal");
+	/* /*
 	public final static Path OUTPUT_PATH_UNI = new Path("/home/output/unigram");
 	public final static Path OUTPUT_PATH_MAX = new Path("/home/output/max");
 	public final static Path OUTPUT_PATH_NI = new Path("/home/output/ni");
-	public final static Path OUTPUT_PATH_FINAL = new Path("/home/output/1");
-	
+	public final static Path OUTPUT_PATH_N = new Path("/home/output/N");
+	*/
 
 	
 	public static enum NUM_AUTHOR{
@@ -79,11 +80,17 @@ public class TfidfDriver {
 	    Counters counters = job2.getCounters();
 	    Counter c = counters.findCounter(NUM_AUTHOR.COUNT);
 	    long numAuthor = c.getValue();
+	    //write N to a hdfs file
+	    if(dfs.exists(OUTPUT_PATH_N)) dfs.delete(OUTPUT_PATH_N, true);
+	    FSDataOutputStream out = dfs.create(OUTPUT_PATH_N);
+	    out.writeLong(numAuthor);
+	    out.close();
 	    
+	    
+	    //job 3
 	    Configuration tfConf = new Configuration();
 	    tfConf.set("num_author", numAuthor+"");
 	    
-	    //job 3
 	    Job job3 = Job.getInstance(tfConf, "get ni"); 
 	    job3.setJarByClass(TfidfDriver.class);
 	    job3.setMapperClass(NiMapper.class);

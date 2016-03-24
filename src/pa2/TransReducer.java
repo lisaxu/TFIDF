@@ -6,7 +6,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 
 public class TransReducer extends Reducer<Text,Text,Text,Text>{
-	//input: <author;   unigram:TFIDF>
+	//input: <author;   unigram TFIDF IDF>
 	//output: <author;   (unigram:TFIDF, unigram:TFIDF, unigram:TFIDF,...,)>
 	
 	public void reduce(Text key, Iterable<Text> values,Context context) throws IOException, InterruptedException {
@@ -16,7 +16,7 @@ public class TransReducer extends Reducer<Text,Text,Text,Text>{
 			context.write(key, val);
 		}
 		
-		context.write(key, new Text(build.toString()));
+		//context.write(key, new Text(build.toString()));
 
 	}
 }
