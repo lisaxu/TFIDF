@@ -14,21 +14,11 @@ import org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
+import common.PathUtil;
+
 
 
 public class TfidfDriver {
-	
-	public final static Path OUTPUT_PATH_UNI = new Path("/output/unigramLocal");
-	public final static Path OUTPUT_PATH_MAX = new Path("/output/maxLocal");
-	public final static Path OUTPUT_PATH_NI = new Path("/output/niLocal");
-	public final static Path OUTPUT_PATH_N = new Path("/output/NLocal");
-	/* /*
-	public final static Path OUTPUT_PATH_UNI = new Path("/home/output/unigram");
-	public final static Path OUTPUT_PATH_MAX = new Path("/home/output/max");
-	public final static Path OUTPUT_PATH_NI = new Path("/home/output/ni");
-	public final static Path OUTPUT_PATH_N = new Path("/home/output/N");
-	*/
-
 	
 	public static enum NUM_AUTHOR{
 		COUNT
@@ -55,8 +45,8 @@ public class TfidfDriver {
 	    job1.setOutputKeyClass(Text.class);
 	    job1.setOutputValueClass(IntWritable.class);
 	    FileInputFormat.addInputPath(job1, new Path(args[0]));
-	    FileOutputFormat.setOutputPath(job1, OUTPUT_PATH_UNI);
-	    if(dfs.exists(OUTPUT_PATH_UNI)) dfs.delete(OUTPUT_PATH_UNI, true);
+	    FileOutputFormat.setOutputPath(job1, PathUtil.OUTPUT_PATH_UNI);
+	    if(dfs.exists(PathUtil.OUTPUT_PATH_UNI)) dfs.delete(PathUtil.OUTPUT_PATH_UNI, true);
 	    code = job1.waitForCompletion(true) ? 0 : 1;
 	    
 	    //job 2
@@ -69,11 +59,11 @@ public class TfidfDriver {
 	    job2.setReducerClass(MaxReducer.class);
 	    job2.setOutputKeyClass(Text.class);
 	    job2.setOutputValueClass(Text.class);
-	    FileInputFormat.addInputPath(job2, OUTPUT_PATH_UNI);
-	    FileOutputFormat.setOutputPath(job2, OUTPUT_PATH_MAX);
+	    FileInputFormat.addInputPath(job2, PathUtil.OUTPUT_PATH_UNI);
+	    FileOutputFormat.setOutputPath(job2, PathUtil.OUTPUT_PATH_MAX);
 	    job2.setInputFormatClass(KeyValueTextInputFormat.class);
 	    job2.setOutputFormatClass(TextOutputFormat.class);
-	    if(dfs.exists(OUTPUT_PATH_MAX)) dfs.delete(OUTPUT_PATH_MAX, true);
+	    if(dfs.exists(PathUtil.OUTPUT_PATH_MAX)) dfs.delete(PathUtil.OUTPUT_PATH_MAX, true);
 	    code = job2.waitForCompletion(true) ? 0 : 1;
 	    
 	    //get counters from job2
@@ -81,8 +71,8 @@ public class TfidfDriver {
 	    Counter c = counters.findCounter(NUM_AUTHOR.COUNT);
 	    long numAuthor = c.getValue();
 	    //write N to a hdfs file
-	    if(dfs.exists(OUTPUT_PATH_N)) dfs.delete(OUTPUT_PATH_N, true);
-	    FSDataOutputStream out = dfs.create(OUTPUT_PATH_N);
+	    if(dfs.exists(PathUtil.OUTPUT_PATH_N)) dfs.delete(PathUtil.OUTPUT_PATH_N, true);
+	    FSDataOutputStream out = dfs.create(PathUtil.OUTPUT_PATH_N);
 	    out.writeLong(numAuthor);
 	    out.close();
 	    
@@ -100,11 +90,11 @@ public class TfidfDriver {
 	    job3.setReducerClass(NiReducer.class);
 	    job3.setOutputKeyClass(Text.class);
 	    job3.setOutputValueClass(Text.class);
-	    FileInputFormat.addInputPath(job3, OUTPUT_PATH_MAX);
-	    FileOutputFormat.setOutputPath(job3, OUTPUT_PATH_NI);
+	    FileInputFormat.addInputPath(job3, PathUtil.OUTPUT_PATH_MAX);
+	    FileOutputFormat.setOutputPath(job3, PathUtil.OUTPUT_PATH_NI);
 	    job3.setInputFormatClass(KeyValueTextInputFormat.class);
 	    job3.setOutputFormatClass(TextOutputFormat.class);
-	    if(dfs.exists(OUTPUT_PATH_NI)) dfs.delete(OUTPUT_PATH_NI, true);
+	    if(dfs.exists(PathUtil.OUTPUT_PATH_NI)) dfs.delete(PathUtil.OUTPUT_PATH_NI, true);
 	    code = job3.waitForCompletion(true) ? 0 : 1;
 	    
 		//job 4
@@ -117,7 +107,7 @@ public class TfidfDriver {
 		job4.setReducerClass(TransReducer.class);
 		job4.setOutputKeyClass(Text.class);
 		job4.setOutputValueClass(Text.class);
-	    FileInputFormat.addInputPath(job4, OUTPUT_PATH_NI);
+	    FileInputFormat.addInputPath(job4, PathUtil.OUTPUT_PATH_NI);
 	    FileOutputFormat.setOutputPath(job4, new Path(args[1]));
 	    job4.setInputFormatClass(KeyValueTextInputFormat.class);
 	    job4.setOutputFormatClass(TextOutputFormat.class);

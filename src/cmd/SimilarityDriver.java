@@ -10,6 +10,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -20,27 +21,18 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.LineReader;
 
+import common.PathUtil;
 import pa2.TfidfDriver;
 import pa2.UnigramMapper;
 import pa2.UnigramReducer;
 
 public class SimilarityDriver {
-	public final static Path OUTPUT_PATH_UNKNOWN_UNI = new Path("/output/unknownUnigramLocal");
-	public final static Path OUTPUT_FILE_UNKNOWN_UNI = new Path("/output/unknownUnigramLocal/part-r-00000");
-	public final static Path OUTPUT_FILE_UNKNOWN_TF = new Path("/output/unknownTFLocal");
-	
-	public final static Path OUTPUT_PATH_FROM_OFFLINE = new Path("/output/local1");
-	
-	public final static Path OUTPUT_PATH_UNKNOWN_NI = new Path("/output/unknownNiLocal");
-	
-	public final static Path OUTPUT_PATH_N = new Path("/output/NLocal"); //same as in TfidfDriver
-	public final static Path OUTPUT_PATH_NI = new Path("/output/niLocal");
-	
+
 	public static void getMaxOccurrence(Configuration conf) throws IOException{
 		FileSystem fs = FileSystem.get(conf);
-		if(!fs.exists(OUTPUT_FILE_UNKNOWN_UNI))
+		if(!fs.exists(PathUtil.OUTPUT_FILE_UNKNOWN_UNI)) 
 			return;
-		FSDataInputStream in = fs.open(OUTPUT_FILE_UNKNOWN_UNI);
+		FSDataInputStream in = fs.open(PathUtil.OUTPUT_FILE_UNKNOWN_UNI);
 		LineReader lineReader = new LineReader(in, conf);
 		Text currentLine = new Text(""); 
 		
@@ -59,8 +51,8 @@ public class SimilarityDriver {
 		in.close();
 		
 		//write TF value to output file
-		if(fs.exists(OUTPUT_FILE_UNKNOWN_TF)) fs.delete(OUTPUT_FILE_UNKNOWN_TF,true);
-		FSDataOutputStream out = fs.create(OUTPUT_FILE_UNKNOWN_TF);
+		if(fs.exists(PathUtil.OUTPUT_FILE_UNKNOWN_TF)) fs.delete(PathUtil.OUTPUT_FILE_UNKNOWN_TF,true);
+		FSDataOutputStream out = fs.create(PathUtil.OUTPUT_FILE_UNKNOWN_TF);
 		for(Map.Entry<String, Integer> ent: table.entrySet()){
 			out.writeBytes(ent.getKey() + " " + (double)ent.getValue() / max + "\n");
 		}
@@ -68,7 +60,7 @@ public class SimilarityDriver {
 	}
 	
 	public static void getNumberOfAuthor(Configuration conf) throws IOException{
-		Path NumAuthorFile = OUTPUT_PATH_N;
+		Path NumAuthorFile = PathUtil.OUTPUT_PATH_N;
 		FileSystem fs = NumAuthorFile.getFileSystem(conf);
 		if(!fs.exists(NumAuthorFile))
 			return;
@@ -98,29 +90,40 @@ public class SimilarityDriver {
 	    job1.setOutputKeyClass(Text.class);
 	    job1.setOutputValueClass(IntWritable.class);
 	    FileInputFormat.addInputPath(job1, new Path(args[0]));
-	    FileOutputFormat.setOutputPath(job1, OUTPUT_PATH_UNKNOWN_UNI);
-	    if(dfs.exists(OUTPUT_PATH_UNKNOWN_UNI)) dfs.delete(OUTPUT_PATH_UNKNOWN_UNI, true);
+	    FileOutputFormat.setOutputPath(job1, PathUtil.OUTPUT_PATH_UNKNOWN_UNI);
+	    if(dfs.exists(PathUtil.OUTPUT_PATH_UNKNOWN_UNI)) dfs.delete(PathUtil.OUTPUT_PATH_UNKNOWN_UNI, true);
 	    code = job1.waitForCompletion(true) ? 0 : 1;
 	    
 	    getMaxOccurrence(conf);
 	    getNumberOfAuthor(conf);
 	    
 	   
-	    Job job2 = Job.getInstance(conf, "fetch ni");
+	    Job job2 = Job.getInstance(conf, "tfidf"); //fetch ni and calculate tfidf
 	    //job2.addCacheFile(OUTPUT_PATH_UNKNOWN_TF.toUri()); //add unigram TF vector to distributed cache
 	    job2.setJarByClass(TfidfDriver.class);
 	    job2.setMapperClass(FetchNiMapper.class);
 	    job2.setReducerClass(FetchNiReducer.class);
 	    job2.setOutputKeyClass(Text.class);
 	    job2.setOutputValueClass(Text.class);
-	    FileInputFormat.addInputPath(job2, OUTPUT_PATH_NI);
-	    FileOutputFormat.setOutputPath(job2, OUTPUT_PATH_UNKNOWN_NI);
+	    FileInputFormat.addInputPath(job2, PathUtil.OUTPUT_PATH_NI);
+	    FileOutputFormat.setOutputPath(job2, PathUtil.OUTPUT_PATH_UNKNOWN_TFIDF);
 	    job2.setInputFormatClass(KeyValueTextInputFormat.class);
 	    job2.setOutputFormatClass(TextOutputFormat.class);
-	    if(dfs.exists(OUTPUT_PATH_UNKNOWN_NI)) dfs.delete(OUTPUT_PATH_UNKNOWN_NI, true);
+	    if(dfs.exists(PathUtil.OUTPUT_PATH_UNKNOWN_TFIDF)) dfs.delete(PathUtil.OUTPUT_PATH_UNKNOWN_TFIDF, true);
 	    code = job2.waitForCompletion(true) ? 0 : 1;
 	    
-	    
+	    Job job3 = Job.getInstance(conf, "cosine"); 
+	    job3.setJarByClass(TfidfDriver.class);
+	    job3.setMapperClass(VectorMapper.class);
+	    job3.setReducerClass(VectorReducer.class);
+	    job3.setOutputKeyClass(Text.class);
+	    job3.setOutputValueClass(DoubleWritable.class);
+	    FileInputFormat.addInputPath(job3, PathUtil.OUTPUT_PATH_OFFLINE_RESULT);
+	    FileOutputFormat.setOutputPath(job3, PathUtil.OUTPUT_PATH_FINAL);
+	    job3.setInputFormatClass(KeyValueTextInputFormat.class);
+	    job3.setOutputFormatClass(TextOutputFormat.class);
+	    if(dfs.exists(PathUtil.OUTPUT_PATH_FINAL)) dfs.delete(PathUtil.OUTPUT_PATH_FINAL, true);
+	    code = job3.waitForCompletion(true) ? 0 : 1;
 	    
 	    System.exit(code);
 	}

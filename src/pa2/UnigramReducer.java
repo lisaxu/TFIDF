@@ -8,8 +8,8 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 
 public class UnigramReducer extends Reducer<Text,IntWritable,Text,IntWritable> {	   
-	//input: <author UnigramFreqWritable;		1>
-	//output: <author, unigram;					termFrequencyFij>
+	//input: <author|unigram; 1>
+	//output: <author|unigram;	termFrequencyFij>
     public void reduce(Text key, Iterable<IntWritable> values,
                        Context context
                        ) throws IOException, InterruptedException {

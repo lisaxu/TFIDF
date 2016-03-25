@@ -9,7 +9,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 
 public class UnigramMapper extends Mapper <Object, Text, Text, IntWritable>{
 	//input: <lineoffset#, a line>
-	//output: <author UnigramFreqWritable; 1>
+	//output: <author|unigram; 1>
 	
 	private final static IntWritable one = new IntWritable(1);
 	public void map(Object key, Text value, Context context) throws IOException, InterruptedException{
@@ -21,7 +21,7 @@ public class UnigramMapper extends Mapper <Object, Text, Text, IntWritable>{
     	String[] unigram = line.substring(start + 5).replaceAll("[^A-Za-z0-9\\s]", "").toLowerCase().split("\\s+"); 
 		for(String s: unigram){
 			if(!s.isEmpty()){
-				context.write(new Text(author + "," + s), one);
+				context.write(new Text(author + "|" + s), one);
 			}
 		}	
 	}

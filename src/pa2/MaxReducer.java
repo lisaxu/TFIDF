@@ -12,12 +12,11 @@ import pa2.TfidfDriver.NUM_AUTHOR;
 
 public class MaxReducer extends Reducer<Text,UnigramFreqWritable,Text,Text> {	   
 	//input: <author;   UnigramFreqWritable:[unigram termFrequencyFij]>
-	//output: <unigram;   author,TF>
+	//output: <unigram;   author|TF>
 	
 	public void reduce(Text key, Iterable<UnigramFreqWritable> values,Context context) throws IOException, InterruptedException {
 		HashMap<String, Integer> cache = new HashMap<String, Integer>();
 		
-    	
     	int max = Integer.MIN_VALUE;
     	int freq = -1;
     	for (UnigramFreqWritable val : values) {  //cannot iterate twice, cache it
@@ -30,10 +29,14 @@ public class MaxReducer extends Reducer<Text,UnigramFreqWritable,Text,Text> {
     	}
     	
     	for(Map.Entry<String, Integer> ent: cache.entrySet()){
-    		 context.write(new Text(ent.getKey()), new Text(key.toString() + "," +  (double)ent.getValue() / max));
+    		 context.write(new Text(ent.getKey()), new Text(key.toString() + "|" +  (double)ent.getValue() / max));
     	}
     	
-
+		/*
+		for (UnigramFreqWritable val : values) { 
+			context.write(val.getUnigram(), val.getFreqText());
+	    	  
+	    }*/
     	context.getCounter(NUM_AUTHOR.COUNT).increment(1);
     }
     
